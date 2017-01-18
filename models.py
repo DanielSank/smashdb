@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -26,7 +27,8 @@ class Game(Base):
 
     # local
     id = Column(Integer, primary_key=True)
-    stocks_remaining = Column(Integer, nullable=False)
+    stocks_remaining = Column(Integer, nullable=True)
+    order_in_set = Column(Integer, nullable=True)
 
     # many -> one
     winner_id = Column(Integer, ForeignKey('players.id'), nullable=False)
@@ -37,17 +39,20 @@ class Game(Base):
     set_id = Column(Integer, ForeignKey('sets.id'), nullable=True)
     set = relationship('Set', back_populates='games')
 
-    tournament_id = Column(
-            Integer,
-            ForeignKey('tournaments.id'),
-            nullable=False)
-    tournament = relationship('Tournament', back_populates='games')
+    __table_args__ = (UniqueConstraint(
+        'set_id',
+        'order_in_set',
+        name='_set_order_in_set_uc'),)
 
 
 class Set(Base):
     __tablename__ = 'sets'
 
     id = Column(Integer, primary_key=True)
+
+    # many -> one
+    tournament_id = Column(Integer, ForeignKey('tournaments.id'), nullable=True)
+    tournament = relationship('Tournament', back_populates='sets')
 
     # one -> many
     games = relationship('Game', back_populates='set')
@@ -63,8 +68,8 @@ class Tournament(Base):
     end_date = Column(Date)
 
     # one -> many
-    games = relationship('Game', back_populates='tournament')
     placements = relationship('Placement', back_populates='tournament')
+    sets = relationship('Set', back_populates='tournament')
 
 
 class Placement(Base):
